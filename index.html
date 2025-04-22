@@ -1,34 +1,143 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <link rel="stylesheet" href="style.css" />
-    <script src="/index.js"></script>
+    <title>Coin Tracker</title>
+    <link rel="shortcut icon" href="img/My LOGO.jpg" type="image/x-icon" />
+
+    <!--Google font linked here-->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!--Css is linked here-->
+    <link rel="stylesheet" href="styles.css" />
   </head>
+
   <body>
-    <div class="box">
-      <main class="main">
-        <section class="header">
-          <input
-          id="search-input"
-          type="search"
+    <!--This section contain the search_bar and filter button-->
+    <section class="header container">
+      <div class="nav">
+        <input
+          type="text"
+          name="seach"
+          id="search_bar"
           placeholder="Search By Name or Symbol"
-          autocomplete="off"
-          />
-          <button class="btn" id="value-button">Sort By Mkt Cap</button>
-          <button class="btn" id="sort-button">Sort By percentage</button>
-        </section>
+        />
+        <div class="btn">
+          <button onclick="toggleMarketCapSort()">Sort By Mkt Cap</button>
+          <button onclick="Percentage()">Sort by percentage</button>
+        </div>
+      </div>
+    </section>
 
-        <section id="items">
-          <table
-          class="coin-container posts-container data-container"
-          id="data-table"
-          ></table>
-        </section>
-      </main>
-    </div>
+    <!--This section contain Table-->
+    <section class="table container2">
+      <table class="table-main">
+        <tbody class="table_body"></tbody>
+      </table>
+    </section>
+
+    <!--Script Js linked here-->
+    <script>
+      let table = document.querySelector(".table_body");
+      let allCoins = []; // ✅ global cache
+
+      // Fetch only once
+      async function fetchData() {
+        try {
+          const response = await fetch(
+            "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false"
+          );
+          const data = await response.json();
+          allCoins = data; // ✅ store in global
+          renderData(allCoins); // show data
+        } catch (error) {
+          console.error("Failed to fetch:", error);
+        }
+      }
+
+      // Render data
+      function renderData(data) {
+        table.innerHTML = ""; // clear before render
+        data.forEach((item) => {
+          let price_change_24h = parseFloat(
+            item.price_change_percentage_24h
+          ).toFixed(2);
+
+          let row = document.createElement("tr");
+
+          row.innerHTML = `
+      <td>
+        <div class="coin-img">
+          <img src="${item.image}" style="width: 45px; height: 45px" />
+          <div class="coin-name">${item.name}</div>
+        </div>
+      </td>
+      <td>${item.symbol.toUpperCase()}</td>
+      <td>${item.current_price}</td>
+      <td>${item.total_volume}</td>
+      <td class="percentage_change">${price_change_24h}%</td>
+      <td>Mkt Cap: ${item.market_cap}</td>
+    `;
+
+          // Color for percentage
+          let percentCell = row.querySelector(".percentage_change");
+          percentCell.style.color = price_change_24h < 0 ? "red" : "green";
+
+          table.appendChild(row);
+        });
+      }
+
+      // Filter on search input
+      function updateTable(searchTerm) {
+        const filtered = allCoins.filter(
+          (item) =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        renderData(filtered);
+      }
+
+      // Sort by Market Cap
+      let sortOrder = "desc";
+      function toggleMarketCapSort() {
+        const sorted = [...allCoins].sort((a, b) =>
+          sortOrder === "desc"
+            ? b.market_cap - a.market_cap
+            : a.market_cap - b.market_cap
+        );
+        sortOrder = sortOrder === "desc" ? "asc" : "desc";
+        renderData(sorted);
+      }
+
+      // Sort by 24h Percentage
+      let sortPercentage = "desc";
+      function Percentage() {
+        const sorted = [...allCoins].sort((a, b) =>
+          sortPercentage === "desc"
+            ? b.price_change_percentage_24h - a.price_change_percentage_24h
+            : a.price_change_percentage_24h - b.price_change_percentage_24h
+        );
+        sortPercentage = sortPercentage === "desc" ? "asc" : "desc";
+        renderData(sorted);
+      }
+
+      // Event Listeners
+
+      let debounceTimer;
+      document.getElementById("search_bar").addEventListener("input", (e) => {
+        clearTimeout(debounceTimer); // 1. Cancel the previous timer (if still waiting)
+        debounceTimer = setTimeout(() => {
+          updateTable(e.target.value); // 2. Set a new timer (delayed execution)
+        }, 300); // 3. Wait 300ms after the last keystroke
+      });
+      // Initial fetch
+      fetchData();
+    </script>
   </body>
-  </html> 
-
+</html>
